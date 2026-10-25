@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cinder Pact</title>
+<meta name="description" content="A live multiplayer match game. Share a room code. Keep one flame alive through eight storms. No login, no install.">
+<meta property="og:title" content="Cinder Pact">
+<meta property="og:description" content="Keep one match alive through eight storms. Join with a room code. No login.">
+<meta property="og:image" content="https://abhishekrana254.github.io/cinder-pact/cover.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect fill='%23160e0a' width='32' height='32'/%3E%3Cpath fill='%23ff8a3d' d='M16 4c2 5 8 7 8 14a8 8 0 1 1-16 0c0-4 3-6 4-9 1 2 2 3 4-5z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,520;9..144,680&family=Outfit:wght@380;560&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #140e0b;
+    --card: #261812;
+    --ink: #f6efe6;
+    --muted: #cbb8a6;
+    --line: #3d2a22;
+    --amber: #ffb15a;
+    --flame: #ff6a2c;
+    --good: #b7d7a8;
+    --bad: #ff8d78;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 420px at 50% -10%, #3a2418 0%, transparent 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: Outfit, sans-serif;
+    font-weight: 380;
+  }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  .wrap { max-width: 460px; margin: 0 auto; padding: 22px 16px 40px; }
+  h1 {
+    font-family: Fraunces, serif;
+    font-weight: 680;
+    font-size: 42px;
+    line-height: 0.95;
+    margin: 8px 0 6px;
+    letter-spacing: -0.03em;
+  }
+  .lede { color: var(--muted); margin: 0 0 16px; }
+  .flame-wrap { display: flex; justify-content: center; margin: 8px 0 4px; }
+  .flame {
+    width: 86px; height: 120px; position: relative;
+    filter: drop-shadow(0 0 18px rgba(255, 106, 44, 0.45));
+  }
+  .flame i {
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: 54px; border-radius: 50% 50% 46% 46%;
+    background: radial-gradient(circle at 50% 70%, #fff1c9, #ffb15a 35%, #ff6a2c 70%, #9a2e12);
+    transform-origin: 50% 100%;
+    animation: flick 0.9s ease-in-out infinite alternate;
+  }
+  .flame.dead i { animation: none; filter: grayscale(1); opacity: 0.35; height: 18px !important; }
+  @keyframes flick { from { transform: translateX(-50%) scaleX(1); } to { transform: translateX(-50%) scaleX(0.86) rotate(-2deg); } }
+  .meter { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 14px;
+    margin: 12px 0;
+  }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+  input[type=text] {
+    width: 100%; background: #140e0b; border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; outline: none;
+  }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+  .btn {
+    border: 0; border-radius: 14px; padding: 14px 12px;
+    background: var(--amber); color: #2a160c; font-weight: 560;
+  }
+  .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  .btn:disabled { opacity: 0.45; }
+  .code {
+    font-family: Fraunces, serif; font-size: 48px; letter-spacing: 0.12em;
+    text-align: center; margin: 4px 0;
+  }
+  .rules { color: var(--muted); font-size: 14.5px; line-height: 1.45; }
+  .rules b { color: var(--ink); font-weight: 560; }
+  .seats { list-style: none; padding: 0; margin: 0; }
+  .seats li {
+    display: flex; justify-content: space-between; gap: 8px;
+    padding: 8px 0; border-bottom: 1px solid var(--line);
+  }
+  .vows { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .vow {
+    text-align: left; background: #140e0b; border: 1px solid var(--line);
+    border-radius: 14px; padding: 12px;
+  }
+  .vow.on { border-color: var(--amber); background: #3a2616; }
+  .vow small { display: block; color: var(--muted); margin-top: 4px; }
+  .timer { font-variant-numeric: tabular-nums; color: var(--amber); }
+  .storm { font-family: Fraunces, serif; font-size: 28px; margin: 0; }
+  .good { color: var(--good); } .bad { color: var(--bad); }
+  .status { min-height: 1.2em; color: var(--muted); font-size: 14px; }
+  .log { font-size: 14px; color: var(--muted); }
+  a { color: var(--amber); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="flame-wrap"><div class="flame" id="flame"><i></i></div></div>
+  <div class="meter"><span id="flameLabel">Flame 5</span><span id="roundLabel"></span></div>
+  <h1>Cinder Pact</h1>
+  <p class="lede" id="lede">One match. Eight storms. Every player locks a vow before the weather shows.</p>
+  <div id="app"></div>
+</div>
+<script src="vendor/mqtt.min.js"></script>
+<script src="game.js"></script>
+<script>
+(function () {
+  var C = window.Cinder;
+  var BROKER = "wss://broker.hivemq.com:8884/mqtt";
+  var app = document.getElementById("app");
+  var flameEl = document.querySelector("#flame i");
+  var flameBox = document.getElementById("flame");
+  var you = {
+    id: sessionStorage.getItem("cinder-id") || ("p" + Math.random().toString(36).slice(2, 10)),
+    name: localStorage.getItem("cinder-name") || ""
+  };
+  sessionStorage.setItem("cinder-id", you.id);
+  var role = null;
+  var client = null;
+  var raw = null;
+  var tick = null;
+  var view = null;
+  var myVow = null;
+  var seenRound = 0;
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function topic(code, leaf) { return "cinderpact26/" + code + "/" + leaf; }
+  function setFlame(n) {
+    var h = 18 + (Math.max(0, Math.min(10, n)) / 10) * 96;
+    flameEl.style.height = h + "px";
+    flameBox.classList.toggle("dead", n <= 0);
+    document.getElementById("flameLabel").textContent = "Flame " + n + " / 10";
+  }
+  function outbound() {
+    var phase = raw.phase;
+    return {
+      phase: phase,
+      code: raw.code,
+      round: raw.round,
+      rounds: C.ROUNDS,
+      flame: raw.flame,
+      storm: phase === "choose" ? null : raw.storm,
+      deadline: raw.deadline,
+      result: raw.result,
+      notes: phase === "choose" ? [] : raw.notes,
+      per: phase === "choose" ? [] : raw.per,
+      hostId: raw.seats[0] ? raw.seats[0].id : null,
+      seats: raw.seats.map(function (s) {
+        return {
+          id: s.id, name: s.name, away: !!s.away, host: !!s.host, locked: !!s.vow,
+          vow: phase === "choose" ? null : (s.vow || null)
+        };
+      })
+    };
+  }
+  function bytes(buf) {
+    if (typeof buf === "string") return buf;
+    if (typeof TextDecoder !== "undefined") return new TextDecoder().decode(buf);
+    return buf.toString();
+  }
+  function publish() {
+    if (!client || !raw) return;
+    client.publish(topic(raw.code, "state"), JSON.stringify(outbound()), { retain: true });
+    render(personalize(outbound()));
+  }
+  function personalize(v) {
+    v = JSON.parse(JSON.stringify(v));
+    v.you = you.id;
+    if (v.phase === "choose" && v.round !== seenRound) { myVow = null; seenRound = v.round; }
+    if (v.phase === "choose" && myVow) {
+      v.seats.forEach(function (s) { if (s.id === you.id) { s.vow = myVow; s.locked = true; } });
+    }
+    return v;
+  }
+  function seatById(id) { return raw.seats.filter(function (s) { return s.id === id; })[0]; }
+  function present() { return raw.seats.filter(function (s) { return !s.away; }); }
+  function allLocked() { return present().every(function (s) { return !!s.vow; }); }
+  function armRound() {
+    raw.phase = "choose";
+    raw.round += 1;
+    raw.storm = ["calm", "rain", "wind"][Math.floor(Math.random() * 3)];
+    raw.deadline = Date.now() + C.ROUND_MS;
+    raw.notes = [];
+    raw.per = [];
+    raw.seats.forEach(function (s) { s.vow = null; });
+    myVow = null;
+    publish();
+    clearInterval(tick);
+    tick = setInterval(function () {
+      if (!raw || raw.phase !== "choose") return;
+      if (Date.now() >= raw.deadline || allLocked()) reveal();
+      else render(personalize(outbound()));
+    }, 200);
+  }
+  function reveal() {
+    clearInterval(tick);
+    var res = C.resolveRound(raw.flame, raw.storm, present().map(function (s) {
+      return { id: s.id, name: s.name, vow: s.vow };
+    }));
+    raw.flame = res.flame;
+    raw.notes = res.notes;
+    raw.per = res.per;
+    if (res.died || raw.round >= C.ROUNDS) {
+      raw.phase = "end";
+      raw.result = { lived: !res.died && raw.flame > 0, flame: raw.flame, score: res.died ? 0 : raw.flame };
+    } else {
+      raw.phase = "reveal";
+      setTimeout(function () { if (raw && raw.phase === "reveal") armRound(); }, C.REVEAL_MS);
+    }
+    publish();
+  }
+  function onIn(msg) {
+    if (!msg || !raw) return;
+    if (msg.type === "join" && msg.id && msg.id !== you.id) {
+      var existing = seatById(msg.id);
+      var name = String(msg.name || "Guest").trim().slice(0, 18) || "Guest";
+      if (existing) { existing.name = name; existing.away = false; existing.seen = Date.now(); }
+      else if (raw.phase === "lobby" && raw.seats.length < 6) {
+        raw.seats.push({ id: String(msg.id).slice(0, 40), name: name, vow: null, away: false, host: false, seen: Date.now() });
+      }
+      publish();
+    }
+    if (msg.type === "here" && msg.id) {
+      var s = seatById(msg.id);
+      if (s) { s.away = false; s.seen = Date.now(); }
+    }
+    if (msg.type === "vow" && raw.phase === "choose") {
+      var seat = seatById(msg.id);
+      if (seat && !seat.away && ["shelter", "kindling", "gift", "gamble"].indexOf(msg.vow) >= 0) {
+        seat.vow = msg.vow;
+        publish();
+      }
+    }
+  }
+  function sweepAway() {
+    if (!raw) return;
+    var now = Date.now();
+    var changed = false;
+    raw.seats.forEach(function (s) {
+      if (s.host) return;
+      if (s.seen && now - s.seen > 9000 && !s.away) { s.away = true; changed = true; }
+    });
+    if (changed) publish();
+  }
+  function connect(code) {
+    if (client) { try { client.end(true); } catch (e) {} }
+    client = mqtt.connect(BROKER, {
+      clientId: "cp" + you.id.slice(0, 10) + Math.random().toString(36).slice(2, 6),
+      clean: true,
+      reconnectPeriod: 1200,
+      connectTimeout: 8000
+    });
+    client.on("error", function (err) {
+      var el = document.getElementById("status");
+      if (el) el.textContent = "Connection problem. " + (err && err.message ? err.message : "");
+    });
+    client.on("message", function (t, buf) {
+      var msg; try { msg = JSON.parse(bytes(buf)); } catch (e) { return; }
+      if (t === topic(code, "in") && role === "host") onIn(msg);
+      if (t === topic(code, "state") && role === "guest") render(personalize(msg));
+    });
+    return client;
+  }
+  function fresh(code) {
+    raw = {
+      code: code, phase: "lobby", round: 0, flame: C.START_FLAME,
+      storm: null, deadline: 0, notes: [], per: [], result: null,
+      seats: [{ id: you.id, name: you.name, vow: null, away: false, host: true, seen: Date.now() }]
+    };
+  }
+  function becomeHost(code) {
+    role = "host";
+    fresh(code);
+    render(personalize(outbound()));
+    var c = connect(code);
+    c.on("connect", function () {
+      c.subscribe(topic(code, "in"));
+      publish();
+    });
+    setInterval(sweepAway, 2000);
+    if (navigator.wakeLock) navigator.wakeLock.request("screen").catch(function () {});
+  }
+  function becomeGuest(code) {
+    role = "guest";
+    code = code.toUpperCase();
+    var c = connect(code);
+    var announced = false;
+    c.on("connect", function () {
+      var el = document.getElementById("status");
+      if (el) el.textContent = "Connected. Waiting for the host…";
+      c.subscribe(topic(code, "state"));
+      var pulse = setInterval(function () {
+        if (announced) { clearInterval(pulse); return; }
+        c.publish(topic(code, "in"), JSON.stringify({ type: "join", id: you.id, name: you.name }));
+      }, 600);
+      setTimeout(function () { if (!announced) showError("No table with code " + code + ". Check the code, and make sure the host still has the table open."); }, 12000);
+    });
+    var oldRender = render;
+    render = function (v) {
+      if (v && v.seats && v.seats.some(function (s) { return s.id === you.id; })) announced = true;
+      oldRender(v);
+    };
+    setInterval(function () {
+      if (client && client.connected) client.publish(topic(code, "in"), JSON.stringify({ type: "here", id: you.id }));
+    }, 2000);
+  }
+  function sendVow(vow) {
+    myVow = vow;
+    if (role === "host" && raw && raw.phase === "choose") {
+      var s = seatById(you.id);
+      if (s) s.vow = vow;
+      publish();
+    } else if (client && view) {
+      client.publish(topic(view.code, "in"), JSON.stringify({ type: "vow", id: you.id, vow: vow }));
+      render(personalize(view.phase ? view : view));
+    }
+  }
+  function paintFlameFrom(v) { setFlame(v && typeof v.flame === "number" ? v.flame : C.START_FLAME); }
+  function rulesHtml() {
+    return '<div class="card rules">' +
+      "<b>How a round works.</b> Everyone picks one vow in secret. When every hand is in, or when 12 seconds pass, the storm is revealed on every screen at once." +
+      "<p><b>Shelter</b> stops wind. It does nothing else.<br>" +
+      "<b>Kindling</b> calm +2, rain +1, wind +0.<br>" +
+      "<b>Gift</b> +1 only if at least one other player also gifts this round.<br>" +
+      "<b>Gamble</b> calm +3, rain −1, wind −3.</p>" +
+      "<p><b>Wind hits first</b> and takes 2, unless somebody sheltered. Then vows resolve from the top of the list downward. If the flame hits 0, later vows do not land. The flame never goes above 10. Survive 8 rounds.</p>" +
+      "<p>The person who lights the table is the host. Leave that tab open. Everyone else joins with the code. No accounts, nothing to install.</p></div>";
+  }
+  function seatList(v) {
+    return '<ul class="seats">' + v.seats.map(function (s, i) {
+      var tag = s.id === v.you ? "you" : (s.locked ? "locked" : "waiting");
+      if (s.away) tag = "away";
+      var extra = "";
+      if (v.phase !== "choose" && s.vow) extra = " · " + s.vow;
+      return "<li><span>" + (i + 1) + ". " + esc(s.name) + (s.host ? " · host" : "") + extra + "</span><span>" + tag + "</span></li>";
+    }).join("") + "</ul>";
+  }
+  function vowButtons(v) {
+    var mine = myVow;
+    var items = [
+      ["shelter", "Shelter", "Stops wind"],
+      ["kindling", "Kindling", "Feed the flame"],
+      ["gift", "Gift", "Pays if shared"],
+      ["gamble", "Gamble", "Big swing"]
+    ];
+    return '<div class="vows">' + items.map(function (it) {
+      return '<button class="vow' + (mine === it[0] ? " on" : "") + '" data-vow="' + it[0] + '">' + it[1] + "<small>" + it[2] + "</small></button>";
+    }).join("") + "</div>";
+  }
+  function render(v) {
+    if (v && v.phase !== "home") view = v;
+    window.__cinder = v;
+    paintFlameFrom(v);
+    document.getElementById("roundLabel").textContent = v && v.round ? ("Round " + v.round + " / " + v.rounds) : "";
+    if (!v) return;
+    var html = "";
+    if (v.phase === "lobby") {
+      html += '<div class="card"><div class="code">' + esc(v.code) + '</div>' +
+        '<p class="lede" style="text-align:center">On another phone, open this link and type the code.</p>' +
+        '<div class="row"><button class="btn ghost" id="copy">Copy link</button>' +
+        (v.you === v.hostId ? '<button class="btn" id="start">Start the storms</button>' : "") +
+        "</div></div>" + seatList(v) + rulesHtml();
+    } else if (v.phase === "choose") {
+      var left = Math.max(0, Math.ceil((v.deadline - Date.now()) / 1000));
+      html += '<p class="storm">A storm is forming <span class="timer">' + left + "s</span></p>" + vowButtons(v) + seatList(v);
+    } else if (v.phase === "reveal" || v.phase === "end") {
+      var stormName = v.storm === "wind" ? "Wind" : v.storm === "rain" ? "Rain" : "Calm";
+      html += '<p class="storm">' + stormName + "</p><div class='log'>" + (v.notes || []).map(esc).join("<br>") + "</div><div class='card'>" +
+        (v.per || []).map(function (p) {
+          var cls = p.delta > 0 ? "good" : p.delta < 0 ? "bad" : "";
+          return "<div class='" + cls + "'>" + esc(p.name) + " · " + esc(p.note || "") + "</div>";
+        }).join("") + "</div>";
+      if (v.phase === "end") {
+        html += "<h2 style=\"font-family:Fraunces,serif\">" + (v.result && v.result.lived ? "The match held." : "The match went out.") + "</h2>" +
+          "<p>Score " + (v.result ? v.result.score : 0) + ".</p>" +
+          (v.you === v.hostId ? '<button class="btn" id="again">Light it again</button>' : "<p class='lede'>The host can light another match with the same code.</p>");
+      }
+    } else if (v.phase === "home") html = homeHtml();
+    app.innerHTML = html;
+    bind(v);
+  }
+  function homeHtml() {
+    var params = new URLSearchParams(location.search);
+    var preset = (params.get("room") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 4);
+    return '<div class="card"><label>Your name</label><input id="name" maxlength="18" value="' + esc(you.name) + '" placeholder="Asha">' +
+      (preset ? '<p class="lede">Joining table <b>' + esc(preset) + "</b></p>" : "") +
+      '<div class="row" style="margin-top:10px"><button class="btn" id="host">Light a table</button>' +
+      (preset ? "" : '<button class="btn ghost" id="showjoin">Join with a code</button>') +
+      "</div>" +
+      '<div id="joinbox" style="margin-top:10px;' + (preset ? "" : "display:none") + '"><label>Room code</label>' +
+      '<input id="code" maxlength="4" value="' + esc(preset) + '" placeholder="K7MQ" autocapitalize="characters">' +
+      '<button class="btn" id="join" style="margin-top:8px;width:100%">Sit down</button></div></div>' + rulesHtml();
+  }
+  function showError(text) {
+    app.innerHTML = '<div class="card"><p>' + esc(text) + '</p><button class="btn" id="back">Back</button></div>';
+    var b = document.getElementById("back");
+    if (b) b.onclick = function () { location.href = location.pathname; };
+  }
+  function needName() {
+    var input = document.getElementById("name");
+    var name = (input && input.value || "").trim().slice(0, 18);
+    if (!name) { if (input) input.focus(); return ""; }
+    you.name = name;
+    localStorage.setItem("cinder-name", name);
+    return name;
+  }
+  function bind(v) {
+    document.querySelectorAll("[data-vow]").forEach(function (btn) {
+      btn.onclick = function () { sendVow(btn.getAttribute("data-vow")); };
+    });
+    var copy = document.getElementById("copy");
+    if (copy) copy.onclick = function () {
+      var link = location.origin + location.pathname + "?room=" + v.code;
+      if (navigator.clipboard) navigator.clipboard.writeText(link).then(function () { copy.textContent = "Copied"; });
+    };
+    var start = document.getElementById("start");
+    if (start) start.onclick = function () { if (raw) armRound(); };
+    var again = document.getElementById("again");
+    if (again) again.onclick = function () {
+      var code = raw.code;
+      var seats = raw.seats.map(function (s) { return { id: s.id, name: s.name, vow: null, away: false, host: s.host, seen: Date.now() }; });
+      fresh(code);
+      raw.seats = seats;
+      publish();
+    };
+    var host = document.getElementById("host");
+    if (host) host.onclick = function () { if (needName()) becomeHost(C.makeCode()); };
+    var show = document.getElementById("showjoin");
+    if (show) show.onclick = function () { document.getElementById("joinbox").style.display = "block"; };
+    var join = document.getElementById("join");
+    if (join) join.onclick = function () {
+      if (!needName()) return;
+      var code = (document.getElementById("code").value || "").toUpperCase().replace(/[^A-Z2-9]/g, "").slice(0, 4);
+      if (code.length < 4) return;
+      app.innerHTML = '<p class="lede" id="status">Sitting down at ' + esc(code) + "…</p>";
+      becomeGuest(code);
+    };
+  }
+  window.__cinderApi = { sendVow: sendVow };
+  render({ phase: "home", flame: 5, seats: [], round: 0 });
+})();
+</script>
